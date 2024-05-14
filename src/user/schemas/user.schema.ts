@@ -1,0 +1,11 @@
+import { Schema, Document } from 'mongoose';
+
+export interface User extends Document {
+  readonly name: string;
+  readonly email: string;
+}
+
+export const UserSchema = new Schema({
+  name: String,
+  email: String,
+});

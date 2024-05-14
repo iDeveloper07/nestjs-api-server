@@ -7,15 +7,20 @@ import { User } from './schemas/user.schema';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post()
+  @Get()
   async createUser(@Body() createUserDto: CreateUserDto): Promise<User> {
-    console.log("-------")
+    console.log("-------");
     return await this.userService.createUser(createUserDto);
   }
 
   @Get(':userId')
   async getUser(@Param('userId') userId: string): Promise<User> {
     return await this.userService.findUserById(userId);
+  }
+
+  @Get(':userId/avatar')
+  async getAvatar(@Param('userId') userId: string): Promise<string> {
+    return await this.userService.getAvatar(userId);
   }
 
     // @Get(':userId')

@@ -4,20 +4,22 @@ import { Model } from 'mongoose';
 import { User } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import axios from 'axios';
+// import { RabbitMQService } from '.././rabbitmq/rabbitmq.service';
+import * as amqp from 'amqplib';
 
 @Injectable()
 export class UserService {
   constructor(@InjectModel('User') private readonly userModel: Model<User>) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<User> {
+    // async createUser(name:string, email:string): Promise<User> {
 
-    console.log("----create------");
-
+    // const createUserDto = new CreateUserDto(nname:ame, email);
     const createdUser = new this.userModel(createUserDto);
     const savedUser = await createdUser.save();
 
-    console.log('Sending email to', savedUser.email);
-    console.log('Sending rabbit event for user', savedUser._id);
+    await this.sendEmail(savedUser.email);
+    await this.sendRabbitEvent(savedUser._id);
 
     return savedUser;
   }
@@ -33,6 +35,30 @@ export class UserService {
     return response.data;
 
     // return user;
+  }
+
+  private async sendRabbitEvent(userId: string): Promise<void> {
+    try {
+      const connection = await amqp.connect('amqp://localhost');
+      const channel = await connection.createChannel();
+      const queue = 'hello';
+
+      await channel.assertQueue(queue, { durable: false });
+      channel.sendToQueue(queue, Buffer.from(userId));
+
+      console.log(`RabbitMQ event sent for user ${userId}`);
+
+      setTimeout(() => {
+        connection.close();
+      }, 500);
+    } catch (error) {
+      console.error(`Error sending RabbitMQ event: ${error.message}`);
+      throw error;
+    }
+  }
+  private async sendEmail(email: string): Promise<void> {
+    // Implement email sending logic here
+    console.log(`Sending email to ${email}`);
   }
 
   async getAvatar(userId: string): Promise<string> {

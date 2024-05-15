@@ -11,10 +11,15 @@ import * as amqp from 'amqplib';
 export class UserService {
   constructor(@InjectModel('User') private readonly userModel: Model<User>) {}
 
-  async createUser(createUserDto: CreateUserDto): Promise<User> {
+  // async createUser(createUserDto: CreateUserDto): Promise<User> {
+  async createUser(name:string, email:string): Promise<User> {
     // async createUser(name:string, email:string): Promise<User> {
 
-    // const createUserDto = new CreateUserDto(nname:ame, email);
+    const createUserDto = new CreateUserDto();
+    console.log(createUserDto);
+    createUserDto.name = name;
+    createUserDto.email = email;
+    console.log(createUserDto);
     const createdUser = new this.userModel(createUserDto);
     const savedUser = await createdUser.save();
 

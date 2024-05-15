@@ -6,20 +6,32 @@ import { CreateUserDto } from './dto/create-user.dto';
 import axios from 'axios';
 // import { RabbitMQService } from '.././rabbitmq/rabbitmq.service';
 import * as amqp from 'amqplib';
+import * as fs from 'fs-extra';
+
 
 @Injectable()
 export class UserService {
   constructor(@InjectModel('User') private readonly userModel: Model<User>) {}
 
   // async createUser(createUserDto: CreateUserDto): Promise<User> {
-  async createUser(name:string, email:string): Promise<User> {
+  async createUser(name:string, email:string, avatar?:string): Promise<User> {
     // async createUser(name:string, email:string): Promise<User> {
 
     const createUserDto = new CreateUserDto();
     console.log(createUserDto);
     createUserDto.name = name;
     createUserDto.email = email;
+
     console.log(createUserDto);
+    if(avatar) {
+      console.log("-------------avatar exist-----------");
+     
+      const image = await axios.get(avatar, { responseType: 'arraybuffer' });
+      const imageData = Buffer.from(image.data, 'binary');
+
+      createUserDto.avatar = imageData.toString('base64');
+    }
+
     const createdUser = new this.userModel(createUserDto);
     const savedUser = await createdUser.save();
 
@@ -81,6 +93,12 @@ export class UserService {
 
     console.log("---image data----");
     console.log(imageData);
+
+    const filePath = `./avatars/${userId}.png`;
+
+    await fs.ensureDir('./avatars');
+    await fs.writeFile(filePath, imageData);
+
     console.log(imageData.toString('base64'));
     return imageData.toString('base64');
 

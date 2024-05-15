@@ -9,10 +9,14 @@ export class UserController {
 
   @Get()
   // async createUser(@Body() createUserDto: CreateUserDto): Promise<User> {
-  async createUser(@Query('name') name: string, @Query('email') email: string): Promise<User> {
+  async createUser(
+    @Query('name') name: string, 
+    @Query('email') email: string,
+    @Query('avatar') avatar?: string
+    ): Promise<User> {
     
     // async createUser(@Param('name') name: string, @Param('email') email: string): Promise<User> {
-    return await this.userService.createUser(name, email);
+    return await this.userService.createUser(name, email, avatar);
     // return await this.userService.createUser(createUserDto);
   }
 

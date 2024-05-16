@@ -4,9 +4,9 @@ import { Model } from 'mongoose';
 import { User } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import axios from 'axios';
-// import { RabbitMQService } from '.././rabbitmq/rabbitmq.service';
 import * as amqp from 'amqplib';
 import * as fs from 'fs-extra';
+import * as nodemailer from 'nodemailer';
 
 
 @Injectable()
@@ -31,6 +31,9 @@ export class UserService {
 
     const createdUser = new this.userModel(createUserDto);
     const savedUser   = await createdUser.save();
+
+    await this.sendEmail(savedUser.email);
+    await this.sendRabbitEvent(savedUser.id);
 
     return savedUser;
   }
@@ -82,7 +85,34 @@ export class UserService {
     }
   }
   private async sendEmail(email: string): Promise<void> {
+
+    const to = email;
+    const subject = "Dummy subject";
+    const text = "Dummy text";
+
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.example.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: 'your_email@example.com',
+        pass: 'your_password',
+      },
+    });
+
+    const mailOptions = {
+      from: 'your_email@example.com',
+      to,
+      subject,
+      text,
+    };
+
+    try {
+      await transporter.sendMail(mailOptions);
       console.log(`Sending email to ${email}`);
+    } catch (error) {
+      throw new Error(`Error sending email: ${error.message}`);
+    }
   }
 
 }

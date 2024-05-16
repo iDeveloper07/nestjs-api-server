@@ -28,6 +28,7 @@
     "amqplib": "^0.10.4",
     "axios": "^1.6.8",
     "mongoose": "^8.3.4",
+    "nodemailer": "^6.9.13",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1"
   },

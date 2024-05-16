@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Delete, HttpException, HttpStatus, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete, Scope, HttpStatus, Query, Res } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './schemas/user.schema';
@@ -7,17 +7,10 @@ import { User } from './schemas/user.schema';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get()
-  // async createUser(@Body() createUserDto: CreateUserDto): Promise<User> {
-  async createUser(
-    @Query('name') name: string, 
-    @Query('email') email: string,
-    @Query('avatar') avatar?: string
-    ): Promise<User> {
-    
-    // async createUser(@Param('name') name: string, @Param('email') email: string): Promise<User> {
-    return await this.userService.createUser(name, email, avatar);
-    // return await this.userService.createUser(createUserDto);
+  @Post()
+  async createUser(@Body() createUserDto: CreateUserDto): Promise<User> {
+    console.log(createUserDto);
+    return await this.userService.createUser(createUserDto);
   }
 
   @Get(':userId')

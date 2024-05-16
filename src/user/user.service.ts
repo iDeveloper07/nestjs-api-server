@@ -13,45 +13,30 @@ import * as fs from 'fs-extra';
 export class UserService {
   constructor(@InjectModel('User') private readonly userModel: Model<User>) {}
 
-  // async createUser(createUserDto: CreateUserDto): Promise<User> {
-  async createUser(name:string, email:string, avatar?:string): Promise<User> {
-    // async createUser(name:string, email:string): Promise<User> {
+  async createUser(createUserDto: CreateUserDto): Promise<User> {
 
-    const createUserDto = new CreateUserDto();
-    console.log(createUserDto);
-    createUserDto.name = name;
-    createUserDto.email = email;
+    if(createUserDto.avatar) {
 
-    console.log(createUserDto);
-    if(avatar) {
-      console.log("-------------avatar exist-----------");
-     
-      const image = await axios.get(avatar, { responseType: 'arraybuffer' });
+      const image = await axios.get(createUserDto.avatar, { responseType: 'arraybuffer' });
       const imageData = Buffer.from(image.data, 'binary');
 
       createUserDto.avatar = imageData.toString('base64');
+
+      const filePath = `./avatars/${createUserDto.id}.png`;
+
+      await fs.ensureDir('./avatars');
+      await fs.writeFile(filePath, imageData);
     }
 
     const createdUser = new this.userModel(createUserDto);
     const savedUser = await createdUser.save();
 
-    await this.sendEmail(savedUser.email);
-    await this.sendRabbitEvent(savedUser._id);
-
     return savedUser;
   }
 
   async findUserById(userId: string): Promise<User> {
-    // const user = await this.userModel.findById(userId).exec();
-    // console.log("----findUserById------");
-    // console.log(user);
     const response = await axios.get(`https://reqres.in/api/users/${userId}`);
-    console.log("---response--");
-    console.log(response);
-    console.log(response.data);
     return response.data;
-
-    // return user;
   }
 
   private async sendRabbitEvent(userId: string): Promise<void> {
@@ -79,30 +64,8 @@ export class UserService {
   }
 
   async getAvatar(userId: string): Promise<string> {
-    // const user = await this.userModel.findById(userId).exec();
-    // console.log("----findUserById------");
-    // console.log(user);
-    const response = await axios.get(`https://reqres.in/api/users/${userId}`);
-    console.log("---response--avatar");
-    console.log(response);
-    console.log(response.data.data.avatar);
-    // return response.data.data.avatar;
-    
-    const image = await axios.get(response.data.data.avatar, { responseType: 'arraybuffer' });
-    const imageData = Buffer.from(image.data, 'binary');
-
-    console.log("---image data----");
-    console.log(imageData);
-
-    const filePath = `./avatars/${userId}.png`;
-
-    await fs.ensureDir('./avatars');
-    await fs.writeFile(filePath, imageData);
-
-    console.log(imageData.toString('base64'));
-    return imageData.toString('base64');
-
-    // return user;
+    const userData = await this.userModel.findOne({ id : userId}).exec();
+    return userData.avatar;
   }
 
 //   async deleteUser(userId: string): Promise<User> {

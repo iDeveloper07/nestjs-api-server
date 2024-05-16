@@ -11,13 +11,14 @@ import * as fs from 'fs-extra';
 
 @Injectable()
 export class UserService {
+
   constructor(@InjectModel('User') private readonly userModel: Model<User>) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<User> {
 
     if(createUserDto.avatar) {
 
-      const image = await axios.get(createUserDto.avatar, { responseType: 'arraybuffer' });
+      const image     = await axios.get(createUserDto.avatar, { responseType: 'arraybuffer' });
       const imageData = Buffer.from(image.data, 'binary');
 
       createUserDto.avatar = imageData.toString('base64');
@@ -29,7 +30,7 @@ export class UserService {
     }
 
     const createdUser = new this.userModel(createUserDto);
-    const savedUser = await createdUser.save();
+    const savedUser   = await createdUser.save();
 
     return savedUser;
   }
@@ -39,11 +40,33 @@ export class UserService {
     return response.data;
   }
 
+  async getAvatar(userId: string): Promise<string> {
+    const userData = await this.userModel.findOne({ id : userId}).exec();
+    return userData.avatar;
+  }
+
+  async deleteAvatar(userId: string): Promise<any> {
+
+    const filePath = `./avatars/${userId}.png`; // Adjust this path as per your file storage location
+
+    try {
+      await fs.unlink(filePath);
+    } catch (error) {
+      throw new Error(`Error deleting file: ${error.message}`);
+    }
+
+    return await this.userModel.findOneAndUpdate(
+      { id: userId },
+      { $unset: { avatar: 1 } }
+    ).exec();
+
+  }
+
   private async sendRabbitEvent(userId: string): Promise<void> {
     try {
-      const connection = await amqp.connect('amqp://localhost');
-      const channel = await connection.createChannel();
-      const queue = 'hello';
+      const connection  = await amqp.connect('amqp://localhost');
+      const channel     = await connection.createChannel();
+      const queue       = 'hello';
 
       await channel.assertQueue(queue, { durable: false });
       channel.sendToQueue(queue, Buffer.from(userId));
@@ -59,18 +82,7 @@ export class UserService {
     }
   }
   private async sendEmail(email: string): Promise<void> {
-    // Implement email sending logic here
-    console.log(`Sending email to ${email}`);
+      console.log(`Sending email to ${email}`);
   }
 
-  async getAvatar(userId: string): Promise<string> {
-    const userData = await this.userModel.findOne({ id : userId}).exec();
-    return userData.avatar;
-  }
-
-//   async deleteUser(userId: string): Promise<User> {
-//     return await this.userModel.findByIdAndRemove(userId);
-//   }
-
-  // Add more methods as needed
 }

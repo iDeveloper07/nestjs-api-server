@@ -14,7 +14,7 @@ export class UserService {
 
   constructor(@InjectModel('User') private readonly userModel: Model<User>) {}
 
-  async createUser(createUserDto: CreateUserDto): Promise<User> {
+  async createUser(createUserDto: CreateUserDto): Promise<CreateUserDto> {
 
     if(createUserDto.avatar) {
 
@@ -85,6 +85,9 @@ export class UserService {
     }
   }
   private async sendEmail(email: string): Promise<void> {
+
+    console.log("---mail sent to : "+email);
+    return;
 
     const to = email;
     const subject = "Dummy subject";

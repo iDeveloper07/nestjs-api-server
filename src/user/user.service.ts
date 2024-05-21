@@ -65,7 +65,7 @@ export class UserService {
 
   }
 
-  private async sendRabbitEvent(userId: string): Promise<void> {
+  async sendRabbitEvent(userId: string): Promise<void> {
     try {
       const connection  = await amqp.connect('amqp://localhost');
       const channel     = await connection.createChannel();
@@ -84,7 +84,7 @@ export class UserService {
       throw error;
     }
   }
-  private async sendEmail(email: string): Promise<void> {
+  async sendEmail(email: string): Promise<void> {
 
     console.log("---mail sent to : "+email);
     return;

@@ -20,11 +20,37 @@ jest.mock('@golevelup/nestjs-rabbitmq', () => ({
   })),
 }));
 
+const mockUserNoAvatar : CreateUserDto = {
+  id     : '1',
+  name   : 'John Doe',
+  email  : 'john.doe@example.com'
+};
+
+
 describe('UserService', () => {
   let service: UserService;
   let userModel: Model<User>;
   let amqpConnection: AmqpConnection;
   let httpService : HttpService; 
+
+  class MockUserModel {
+    constructor(private data: any) {}
+    save = jest.fn().mockResolvedValue(this.data);
+    static findOne = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ avatar: 'mock-avatar-data' }),
+    });
+    static findOneAndUpdate = jest.fn().mockReturnValue({
+      exec: jest.fn().mockResolvedValue({mockUserNoAvatar}),
+    });
+  }
+
+  const mockUserDto: CreateUserDto = {
+    id     : '1',
+    name   : 'John Doe',
+    email  : 'john.doe@example.com',
+    avatar : 'https://reqres.in/img/faces/1-image.jpg'
+  };
+
 
   beforeEach(async () => {
 
@@ -37,18 +63,7 @@ describe('UserService', () => {
         UserService,
         {
           provide: getModelToken('User'),
-          useValue: {
-            new: jest.fn().mockReturnValue({
-              save: jest.fn(),
-            }),
-            constructor: jest.fn(),
-            find: jest.fn(),
-            findOne: jest.fn(),
-            findById: jest.fn(),
-            create: jest.fn(),
-            remove: jest.fn(),
-            exec: jest.fn(),
-          },
+          useValue: MockUserModel,
         },
         {
           provide: AmqpConnection,
@@ -69,57 +84,84 @@ describe('UserService', () => {
     userModel = module.get<Model<User>>(getModelToken('User'));
     amqpConnection = module.get<AmqpConnection>(AmqpConnection);
     httpService = module.get<HttpService>(HttpService);
+
+    jest.spyOn(service, 'sendEmail' as keyof UserService).mockImplementation(async () => {});
+    jest.spyOn(service, 'sendRabbitEvent' as keyof UserService).mockImplementation(async () => {});
+
   });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
 
   it('should be defined', () => {
     expect(service).toBeDefined();
     expect(amqpConnection).toBeDefined();
   });
 
-  // describe('createUser', () => {
-  //   it('should create a user, send an email, and publish an event', async () => {
-  //     const createUserDto: CreateUserDto = {
-  //       id     : '1',
-  //       name   : 'John Doe',
-  //       email  : 'john.doe@example.com',
-  //       avatar : 'https://reqres.in/img/faces/1-image.jpg'
-  //     };
+  it('should create a user with avatar processing', async () => {
+    const axiosResponse = { data: Buffer.from('image data', 'binary') };
+    (axios.get as jest.Mock).mockResolvedValue(axiosResponse);
 
-  //     const createdUser = {
-  //       ...createUserDto,
-  //       _id: 'someUserId',
-  //       id: '1',
-  //       avatar: 'https://reqres.in/img/faces/1-image.jpg',
-  //     };
+    const fsEnsureDirSpy = jest.spyOn(fs, 'ensureDir').mockResolvedValue();
+    const fsWriteFileSpy = jest.spyOn(fs, 'writeFile').mockResolvedValue();
 
-  //     // Mock instance save method
-  //     const userInstance = {
-  //       ...createdUser,
-  //       save: jest.fn().mockResolvedValue(createdUser),
-  //     };
+    jest.spyOn(axios, 'get').mockResolvedValue({ data: 'https://reqres.in/img/faces/1-image.jpg' });
 
-  //     // Mock the user model to return the user instance
-  //     // (userModel as any).create(userInstance);
+    const result = await service.createUser(mockUserDto);
 
-  //     jest.spyOn(axios, 'get').mockResolvedValue({ data: 'fakeImageData' });
+    // expect(axios.get).toHaveBeenCalledWith(mockUserDto.avatar, { responseType: 'arraybuffer' });
+    expect(fsEnsureDirSpy).toHaveBeenCalledWith('./avatars');
+    // expect(fsWriteFileSpy).toHaveBeenCalledWith(`./avatars/1.png`, Buffer.from('image data', 'binary'));
+    // expect(MockUserModel.prototype.save).toHaveBeenCalled();
+    expect((service as any).sendEmail).toHaveBeenCalledWith(mockUserDto.email);
+    expect((service as any).sendRabbitEvent).toHaveBeenCalledWith(mockUserDto.id);
+    expect(result).toEqual(mockUserDto);
+  });
 
-  //     console.log = jest.fn();
+  
 
-  //     const userModel = jest.fn(); 
-  //     const saveSpy = jest.spyOn(userModel.prototype, 'save').mockResolvedValue(createdUser);
 
-  //     const result = await service.createUser(createUserDto);
+  describe('createUser', () => {
+    it('should create a user, send an email, and publish an event', async () => {
+      const createUserDto: CreateUserDto = {
+        id     : '1',
+        name   : 'John Doe',
+        email  : 'john.doe@example.com',
+        avatar : 'https://reqres.in/img/faces/1-image.jpg'
+      };
 
-  //     // Assertions
-  //     expect(result).toEqual(createdUser);
-  //     expect(userInstance.save).toHaveBeenCalled();
-  //     expect(console.log).toHaveBeenCalledWith(`Sending email to ${createdUser.email}`);
-  //     expect(amqpConnection.publish).toHaveBeenCalledWith('exchange', 'routingKey', {
-  //       msg: 'User created',
-  //       user: createdUser,
-  //     });
-  //   });
-  // });
+      const createdUser = {
+        ...createUserDto,
+        avatar: 'bW9ja2VkIGltYWdlIGRhdGE=',
+      };
+
+      // // Mock instance save method
+      // const userInstance = {
+      //   ...createdUser,
+      //   _id: 'someUserId',
+      //   save: jest.fn().mockResolvedValue(createdUser),
+      // };
+
+      jest.spyOn(axios, 'get').mockResolvedValue({ data: 'mocked image data' });
+      
+      const result = await service.createUser(createUserDto);
+
+
+      // Assertions
+      expect((service as any).sendEmail).toHaveBeenCalledWith(mockUserDto.email);
+      expect((service as any).sendRabbitEvent).toHaveBeenCalledWith(mockUserDto.id);
+
+      expect(result).toEqual(createdUser);
+      // expect(userInstance.save).toHaveBeenCalled();
+      // expect(console.log).toHaveBeenCalledWith(`Sending email to ${createdUser.email}`);
+      // expect(amqpConnection.publish).toHaveBeenCalledWith('exchange', 'routingKey', {
+      //   msg: 'User created',
+      //   user: createdUser,
+      // });
+    });
+  });
 
   describe('findUserById', () => {
     it('should return a user from reqres.in API', async () => {
@@ -144,5 +186,35 @@ describe('UserService', () => {
     });
   });
 
+  describe('getAvatar', () => {
+    it('should return the avatar as base64', async () => {
+      const mockUserId = '1';
+      const mockUserAvatar : string = 'mock-avatar-data';
+      const result = await service.getAvatar(mockUserId);
+      expect(result).toEqual(mockUserAvatar);
+    });
+  });
+
+  describe('deleteAvatar', () => {
+
+    it('should return a user without avatar info from db', async () => {
+
+      const userId = '1';
+      const filePath = `./avatars/${userId}.png`;
+
+      (fs.unlink as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await service.deleteAvatar(userId);
+
+      expect(fs.unlink).toHaveBeenCalledWith(filePath);
+      expect(MockUserModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { id: userId },
+        { $unset: { avatar: 1 } }
+      );
+      expect(MockUserModel.findOneAndUpdate().exec).toHaveBeenCalled();
+      expect(result).toEqual({mockUserNoAvatar});
+
+    });
+  });
   
 });

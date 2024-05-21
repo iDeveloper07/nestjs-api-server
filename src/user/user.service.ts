@@ -86,7 +86,7 @@ export class UserService {
   }
   async sendEmail(email: string): Promise<void> {
 
-    console.log("---mail sent to : "+email);
+    console.log(`Sending email to ${email}`);
     return;
 
     const to = email;

@@ -10,7 +10,7 @@ const mockUser : CreateUserDto = {
   id     : '1',
   name   : 'John Doe',
   email  : 'john.doe@example.com',
-  avatar : 'https://reqres.in/img/faces/2-image.jpg'
+  avatar : 'https://reqres.in/img/faces/1-image.jpg'
 };
 
 const mockUserNoAvatar : CreateUserDto = {
@@ -41,10 +41,6 @@ describe('UserController', () => {
         UserService,
         {
           provide: getModelToken('User'),
-          useValue: Model,
-        },
-        {
-          provide: getModelToken('Avatar'),
           useValue: Model,
         },
         {

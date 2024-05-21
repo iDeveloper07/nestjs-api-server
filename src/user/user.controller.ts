@@ -14,7 +14,7 @@ export class UserController {
   }
 
   @Get(':userId')
-  async getUser(@Param('userId') userId: string): Promise<User> {
+  async getUser(@Param('userId') userId: string): Promise<CreateUserDto> {
     return await this.userService.findUserById(userId);
   }
 

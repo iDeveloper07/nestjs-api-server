@@ -38,7 +38,7 @@ export class UserService {
     return savedUser;
   }
 
-  async findUserById(userId: string): Promise<User> {
+  async findUserById(userId: string): Promise<CreateUserDto> {
     const response = await axios.get(`https://reqres.in/api/users/${userId}`);
     return response.data;
   }
